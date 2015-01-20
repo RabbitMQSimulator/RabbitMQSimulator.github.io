@@ -93,7 +93,7 @@ class Consumer extends Node implements IConnectable {
   int getType() {
     return type;
   }
-  
+
   String getLabel() {
     return name == null ? label : name;
   }
@@ -107,7 +107,11 @@ class Consumer extends Node implements IConnectable {
   }
 
   boolean canStartConnection() {
-    return outgoing.size() < 1;
+    return true;
+  }
+
+  void removeConnections() {
+    this.disconnectOutgoing();
   }
 
   void trasnferArrived(Transfer transfer) {
@@ -115,14 +119,14 @@ class Consumer extends Node implements IConnectable {
         Message msg = transfer.getData();
         show_message(getLabel(), msg.getPayload());
     }
-    
+
     rotateConsumer();
   }
-  
+
   void rotateConsumer() {
       this.angle += 0.2;
   }
-  
+
   void draw() {
       ConsumerFigure.draw(this.x, this.y, this.nodeColor, 0, nodeStroke, this.radii, this.sides, this.angle);
       drawLabel();
@@ -131,15 +135,20 @@ class Consumer extends Node implements IConnectable {
   void mouseClicked() {
       reset_form("#edit_consumer_form");
       jQuery("#edit_consumer_id").val(this.label);
-      
+
       if (name != null) {
           jQuery("#edit_consumer_name").val(name);
       } else {
           jQuery("#edit_consumer_name").val(label);
       }
-      
+
       enable_form("#edit_consumer_form");
       show_form("#edit_consumer_form");
+  }
+
+  void remove() {
+      disconnectNode(this);
+      removeNode(this);
   }
 }
 
@@ -279,12 +288,12 @@ class Exchange extends Node implements IConnectable {
   int type = EXCHANGE;
   int exchangeType = DIRECT;
   TrieST<Node> bindings;
-  
+
   Exchange(String name, float x, float y) {
     super(name, colors[EXCHANGE], x, y);
     bindings = new TrieST();
   }
-  
+
   void draw() {
     ExchangeFigure.draw(this.x, this.y, this.nodeColor, 0, nodeStroke, this.radii, this.initialSides + this.bindings.itemCount());
     super.drawLabel();
@@ -293,25 +302,25 @@ class Exchange extends Node implements IConnectable {
   int getType() {
     return type;
   }
-  
+
   int getExchangeType() {
     return exchangeType;
   }
-  
+
   int getExchangeTypeString() {
     return exchangeTypes[exchangeType];
   }
-  
+
   void setExchangeType(int type) {
     exchangeType = int(type);
   }
-  
+
   void changeName(String name) {
     this.label = name;
   }
-  
+
   HashMap getAllBindings() {
-    return bindings.allValues(); 
+    return bindings.allValues();
   }
 
   boolean accepts(Node n) {
@@ -324,40 +333,45 @@ class Exchange extends Node implements IConnectable {
         return false;
     }
   }
-  
+
   boolean canStartConnection() {
     return true;
   }
-  
-  void connectWith(Node n, int endpoint) {    
+
+  void removeConnections() {
+    this.disconnectOutgoing();
+    this.disconnectIncomming();
+  }
+
+  void connectWith(Node n, int endpoint) {
     super.connectWith(n, endpoint);
-    
+
     if (endpoint == SOURCE && (n.getType() == QUEUE || n.getType() == EXCHANGE)) {
       String defaultRoutingKey = "";
       addBinding(n, defaultRoutingKey);
     }
   }
-  
+
   boolean addBinding(Node n, String bindingKey) {
     bindings.put(bindingKey, n);
     return true;
   }
-  
+
   boolean updateBinding(Node n, String oldBk, String newBk) {
-    if (oldBk != newBk) {   
+    if (oldBk != newBk) {
       removeBinding(n, oldBk);
       addBinding(n, newBk);
       return true;
     }
-    
+
     return false;
   }
-  
+
   boolean removeBinding(Node n, String bk) {
     bindings.delete(bk, n);
     return true;
   }
-  
+
   void trasnferArrived(Transfer transfer) {
     switch(exchangeType) {
       case DIRECT:
@@ -368,22 +382,22 @@ class Exchange extends Node implements IConnectable {
         break;
       case TOPIC:
         topicRouting(transfer);
-        break;      
+        break;
     }
   }
-  
+
   void directRouting(Transfer transfer) {
     Message msg = transfer.getData();
     ArrayList nodes = bindings.getValue(msg.getRoutingKey());
     deliverMessage2(msg, nodes);
   }
-  
+
   void fanoutRouting(Transfer transfer) {
     Message msg = transfer.getData();
     HashMap nodes = bindings.allValues();
     deliverMessage(msg, nodes);
   }
-  
+
   /**
     * Naive topic routing
     *
@@ -393,7 +407,7 @@ class Exchange extends Node implements IConnectable {
     HashMap nodes = bindings.valuesForRoutingKey(msg.getRoutingKey());
     deliverMessage(msg, nodes);
   }
-  
+
   void deliverMessage(Message msg, HashMap nodes) {
     if (nodes != null) {
       Iterator i = nodes.entrySet().iterator();
@@ -403,7 +417,7 @@ class Exchange extends Node implements IConnectable {
       }
     }
   }
-  
+
   void deliverMessage2(Message msg, ArrayList destinations) {
     if (destinations == null) return;
     int max = destinations.size();
@@ -412,7 +426,7 @@ class Exchange extends Node implements IConnectable {
       stage.addTransfer(new Transfer(stage, this, n, msg));
     }
   }
-  
+
   void mouseClicked() {
     reset_form("#exchange_form");
     jQuery("#exchange_id").val(this.label);
@@ -420,6 +434,11 @@ class Exchange extends Node implements IConnectable {
     jQuery("#exchange_type").val(this.exchangeType);
     enable_form("#exchange_form");
     show_form("#exchange_form");
+  }
+
+  void remove() {
+      disconnectNode(this);
+      removeNode(this);
   }
 }
 
@@ -476,42 +495,42 @@ abstract class Node {
   int radii = 10;
   String label;
   color nodeColor;
-  
+
   ArrayList incoming = new ArrayList(); // nodes that connected to this node
   ArrayList outgoing = new ArrayList(); // nodes this node connected to
-  
+
   Node(String label, color nodeColor, float x, float y) {
      this.label = label;
      this.nodeColor = nodeColor;
      this.x = x;
      this.y = y;
   }
-  
+
   abstract int getType();
   abstract boolean accepts(Node n);
   abstract boolean canStartConnection();
-  
+
   String getLabel() {
     return label;
   }
-  
+
   float getX() {
     return x;
   }
-  
+
   float getY() {
     return y;
   }
-  
+
   boolean isBelowMouse() {
     float closest = 20;
     float d = dist(mouseX, mouseY, this.x, this.y);
     return d < closest;
   }
-  
-  /** 
+
+  /**
     endpoint DESTINATION | SOURCE specifies the role of the
-    Node n.  
+    Node n.
   */
   void connectWith(Node n, int endpoint) {
     if (endpoint == DESTINATION) {
@@ -520,43 +539,86 @@ abstract class Node {
       this.addIncoming(n);
     }
   }
-  
+
+  void removeConnections() {
+  }
+
+  void disconnectFrom(Node n, int endpoint) {
+    if (endpoint == DESTINATION) {
+      this.removeOutgoing(n);
+    } else {
+      this.removeIncoming(n);
+    }
+  }
+
+  void disconnectOutgoing() {
+    this.disconnectNodes(SOURCE);
+  }
+
+  void disconnectIncomming() {
+    this.disconnectNodes(DESTINATION);
+  }
+
+  void disconnectNodes(int endpoint) {
+    if (endpoint == DESTINATION) {
+      ArrayList nodes = incoming;
+    } else {
+      ArrayList nodes = outgoing;
+    }
+
+    for (int i = nodes.size()-1; i >= 0; i--) {
+        Node n = (Ball) nodes.get(i);
+        n.disconnectFrom(this, endpoint);
+    }
+  }
+
   void addIncoming(Node n) {
     incoming.add(n);
   }
-  
+
+  void removeIncoming(Node n) {
+    incoming.remove(n);
+  }
+
   void addOutgoing(Node n) {
     outgoing.add(n);
   }
-  
+
+  void removeOutgoing(Node n) {
+    outgoing.remove(n);
+  }
+
   void trasnferArrived(Transfer transfer) {
   }
-  
+
   void transferDelivered(Transfer transfer) {
     println("transferDelivered");
   }
-  
+
   /**
    * Padding from the simulator boundaries
    */
   int padding() {
     return this.radii * 2 + 2;
   }
-  
+
   void mouseDragged() {
     x = constrain(mouseX, TOOLBARWIDTH + padding(), width - padding());
     y = constrain(mouseY, 0 + padding(), height - padding());
   }
-  
+
   void draw() {
     NodeFigure.draw(this.x, this.y, this.nodeColor, 0, nodeStroke, this.radii)
     drawLabel();
   }
-  
+
   void drawLabel() {
       fill (0);
       textAlign(CENTER, CENTER);
       text(getLabel(), x, y+labelPadding);
+  }
+
+  void remove() {
   }
 }
 
@@ -571,6 +633,107 @@ static class NodeFigure
         ellipse(x, y, radii * 2, radii * 2);
     }
 }
+class NullNode extends Node implements IConnectable {
+  int type = NULL_NODE;
+  float x, y;
+  int radii = 0;
+  String label;
+  color nodeColor;
+
+  ArrayList incoming = new ArrayList(); // nodes that connected to this node
+  ArrayList outgoing = new ArrayList(); // nodes this node connected to
+
+  NullNode(String label, color nodeColor, float x, float y) {
+    super(label, #FFFFFF, x, y);
+  }
+
+  int getType() {
+    return type;
+  }
+
+  boolean accepts(Node n) {
+    return false;
+  }
+
+  boolean canStartConnection() {
+    return false;
+  }
+
+  String getLabel() {
+    return label;
+  }
+
+  float getX() {
+    return 0;
+  }
+
+  float getY() {
+    return 0;
+  }
+
+  boolean isBelowMouse() {
+    return false;
+  }
+
+  /**
+    endpoint DESTINATION | SOURCE specifies the role of the
+    Node n.
+  */
+  void connectWith(Node n, int endpoint) {
+  }
+
+  void removeConnections() {
+  }
+
+  void disconnectFrom(Node n, int endpoint) {
+  }
+
+  void disconnectOutgoing() {
+  }
+
+  void disconnectIncomming() {
+  }
+
+  void disconnectNodes(int endpoint) {
+  }
+
+  void addIncoming(Node n) {
+  }
+
+  void removeIncoming(Node n) {
+  }
+
+  void addOutgoing(Node n) {
+  }
+
+  void removeOutgoing(Node n) {
+  }
+
+  void trasnferArrived(Transfer transfer) {
+  }
+
+  void transferDelivered(Transfer transfer) {
+  }
+
+  /**
+   * Padding from the simulator boundaries
+   */
+  int padding() {
+    return 0;
+  }
+
+  void mouseDragged() {
+  }
+
+  void draw() {
+  }
+
+  void drawLabel() {
+  }
+
+  void remove() {
+  }
+}
 class Producer extends Node implements IConnectable {
     int type = PRODUCER;
     int intervalId = null;
@@ -580,12 +743,13 @@ class Producer extends Node implements IConnectable {
 
     Producer(String label, float x, float y) {
         super(label, colors[PRODUCER], x, y);
+        showForm();
     }
 
     int getType() {
         return type;
     }
-    
+
     void updateName(String name) {
         this.name = name;
     }
@@ -596,6 +760,10 @@ class Producer extends Node implements IConnectable {
 
     boolean canStartConnection() {
         return outgoing.size() < 1;
+    }
+
+    void removeConnections() {
+      this.disconnectOutgoing();
     }
 
     void publishMessage(String payload, String routingKey) {
@@ -620,7 +788,7 @@ class Producer extends Node implements IConnectable {
         clearInterval(intervalId);
         intervalId = null;
     }
-    
+
     void drawLabel() {
         fill (0);
         textAlign(CENTER, CENTER);
@@ -629,28 +797,32 @@ class Producer extends Node implements IConnectable {
     }
 
     void mouseClicked() {
-        prepareEditProducerForm();
-        prepareNewMessageForm();
-        show_form("#edit_producer_form", "#new_message_form");
+      showForm();
     }
-    
+
+    void showForm() {
+      prepareEditProducerForm();
+      prepareNewMessageForm();
+      show_form("#edit_producer_form", "#new_message_form");
+    }
+
     void prepareEditProducerForm() {
         reset_form("#edit_producer_form");
         jQuery("#edit_producer_id").val(this.label);
-        
+
         if (name != null) {
             jQuery("#edit_producer_name").val(name);
         } else {
             jQuery("#edit_producer_name").val(label);
         }
-        
+
         enable_form("#edit_producer_form");
     }
-    
+
     void prepareNewMessageForm() {
         reset_form("#new_message_form");
         jQuery("#new_message_producer_id").val(this.label);
-        
+
         if (intervalId != null) {
             enable_button('#new_message_stop');
         } else {
@@ -663,60 +835,70 @@ class Producer extends Node implements IConnectable {
         }
         enable_form("#new_message_form");
     }
+
+    void remove() {
+        disconnectNode(this);
+        removeNode(this);
+    }
 }
 
 class Queue extends Node implements IConnectable {
   int type = QUEUE;
   ArrayList messages = new ArrayList();
-  Edge anonBinding;  
-  
+  Edge anonBinding;
+
   Queue(String name, float x, float y) {
     super(name, colors[QUEUE], x, y);
   }
-  
+
   int getType() {
     return type;
   }
-  
+
   boolean accepts(Node n) {
     return n.getType() == CONSUMER;
   }
-  
+
   boolean canStartConnection() {
     return true;
   }
-  
+
   void setAnonBinding(Edge e) {
     anonBinding = e;
   }
-  
+
   Edge getAnonBinding() {
     return anonBinding;
   }
-  
+
   void connectWith(Node n, int endpoint) {
     super.connectWith(n, endpoint);
     maybeDeliverMessage();
-  }  
-  
+  }
+
+  void removeConnections() {
+    this.disconnectOutgoing();
+    this.disconnectIncomming();
+  }
+
   void trasnferArrived(Transfer transfer) {
     enqueue(transfer);
     maybeDeliverMessage();
   }
-  
+
   void transferDelivered(Transfer transfer) {
     incoming.add(transfer.getTo());
     maybeDeliverMessage();
   }
-  
+
   void enqueue(Transfer transfer) {
     messages.add(transfer);
   }
-  
+
   Transfer dequeue() {
     return (Transfer) messages.remove(0);
   }
-  
+
   void maybeDeliverMessage() {
     if (messages.size() > 0) {
       if (incoming.size() > 0) {
@@ -726,27 +908,32 @@ class Queue extends Node implements IConnectable {
       }
     }
   }
-  
+
   void changeName(String name) {
     this.label = name;
   }
-  
+
   void draw() {
     QueueFigure.draw(this.x, this.y, this.nodeColor, 0, nodeStroke, Q_WIDTH, Q_HEIGHT, this.messages.size());
     drawLabel();
-    
+
     // draw queue depth text
     fill (0);
     textAlign(CENTER, CENTER);
     text("Msgs: " + str(messages.size()), x, y - radii - 5);
   }
-  
+
   void mouseClicked() {
     reset_form("#queue_form");
     jQuery("#queue_id").val(this.label);
     jQuery("#queue_name").val(this.label);
     enable_form("#queue_form");
     show_form("#queue_form");
+  }
+
+  void remove() {
+      disconnectNode(this);
+      removeNode(this);
   }
 }
 
@@ -800,7 +987,7 @@ boolean advancedMode = false;
 
 boolean isPlayer = false;
 
-static final int WIDTH = 780;
+static final int WIDTH = 600;
 static final int HEIGHT = 410;
 
 static final int edgeStroke = 2;
@@ -812,6 +999,7 @@ static final color selectColor = #FF3030;
 static final color fixedColor  = #FF8080;
 static final color edgeColor   = #000000;
 
+static final int NULL_NODE = -1;
 static final int EXCHANGE = 0;
 static final int QUEUE = 1;
 static final int PRODUCER = 2;
@@ -853,7 +1041,7 @@ JavaScript javascript;
 void setup() {
   Processing.logger = console;
 
-  size(780, 410);
+  size(600, 410);
   font = createFont("SansSerif", fontSize);
   textFont(font);
   smooth();
@@ -917,6 +1105,21 @@ Edge addEdge(Node from, Node to) {
   return e;
 }
 
+void disconnectNode(Node n) {
+  for (int i = edges.size()-1; i >= 0; i--) {
+    Edge et = (Edge) edges.get(i);
+    if (et.from == n || et.to == n) {
+      if (et.to.getType() == EXCHANGE
+        && (et.from.getType() == QUEUE || et.from.getType() == EXCHANGE)) {
+          et.remove();
+      }
+      edges.remove(et);
+    }
+  }
+
+  n.removeConnections();
+}
+
 Node newNodeByType(int type, String label, float x, float y) {
   Node n = null;
   switch (type) {
@@ -956,6 +1159,15 @@ Node addNodeByType(int type, String label, float x, float y) {
 
 Node findNode(String label) {
   return nodeTable.get(label);
+}
+
+void removeNode(Node n) {
+  for (int i = 0 ; i < nodeCount ; i++) {
+    if (nodes[i] == n) {
+      nodes[i] = new NullNode(NULL_NODE, "", 0, 0);
+      // don't reduce nodeCount since we just mark it as null
+    }
+  }
 }
 
 void toggleAdvancedMode(boolean mode) {
@@ -1040,6 +1252,11 @@ void editProducer(String uuid, String name) {
 void editConsumer(String uuid, String name) {
     Consumer n = (Consumer) findNode(uuid);
     n.updateName(name);
+}
+
+void deleteNode(String uuid) {
+  Node n = findNode(uuid);
+  n.remove();
 }
 
 void setProducerInterval(String uuid, int intervalId, int seconds) {

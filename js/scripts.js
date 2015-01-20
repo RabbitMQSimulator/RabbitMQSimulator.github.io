@@ -11927,16 +11927,25 @@ function enable_button(selector) {
 }
 
 function handle_edit_producer_form() {
-    console.log('handle_edit_producer_form');
     var uuid = jQuery('#edit_producer_id').val();
-    var name = jQuery('#edit_producer_name').val();    
+    var name = jQuery('#edit_producer_name').val();
     var pjs = getProcessing();
     pjs.editProducer(uuid, name);
     return false;
 }
 
+function handle_producer_delete() {
+    var producer_id = jQuery('#edit_producer_id').val();
+    var pjs = getProcessing();
+    pjs.deleteNode(producer_id);
+    reset_form("#edit_producer_form");
+    disable_form("#edit_producer_form");
+    reset_form("#new_message_form");
+    disable_form("#new_message_form");
+    return false;
+}
+
 function handle_edit_consumer_form() {
-    console.log('handle_edit_consumer_form');
     var uuid = jQuery('#edit_consumer_id').val();
     var name = jQuery('#edit_consumer_name').val();
     var pjs = getProcessing();
@@ -11944,8 +11953,16 @@ function handle_edit_consumer_form() {
     return false;
 }
 
+function handle_consumer_delete() {
+    var consumer_id = jQuery('#edit_consumer_id').val();
+    var pjs = getProcessing();
+    pjs.deleteNode(consumer_id);
+    reset_form("#edit_consumer_form");
+    disable_form("#edit_consumer_form");
+    return false;
+}
+
 function handle_new_message_form() {
-    console.log('handle_new_message_form');
     var uuid = jQuery('#new_message_producer_id').val();
     var payload = jQuery('#new_message_producer_payload').val();
     var routing_key = jQuery('#new_message_producer_routing_key').val();
@@ -11953,7 +11970,7 @@ function handle_new_message_form() {
     var pjs = getProcessing();
 
     var interval = null;
-        
+
     if (seconds > 0) {
         pjs.stopPublisher(uuid);
         publishMsgWithInterval(pjs, seconds, uuid, payload, routing_key, !PLAYER);
@@ -11961,14 +11978,13 @@ function handle_new_message_form() {
     } else {
         disable_button('#new_message_stop');
     }
-        
+
     pjs.publishMessage(uuid, payload, routing_key);
 
     return false;
 }
 
 function handle_binding_form() {
-    console.log('handle_binding_form');
     var binding_id = jQuery('#binding_id').val();
     var bk = jQuery.trim(jQuery('#binding_key').val());
     var pjs = getProcessing();
@@ -11977,7 +11993,6 @@ function handle_binding_form() {
 }
 
 function handle_queue_form() {
-    console.log('handle_queue_form');
     var uuid = jQuery('#queue_id').val();
     var name = jQuery.trim(jQuery('#queue_name').val());
     var pjs = getProcessing();
@@ -11986,8 +12001,16 @@ function handle_queue_form() {
     return false;
 }
 
+function handle_queue_delete() {
+    var queue_id = jQuery('#queue_id').val();
+    var pjs = getProcessing();
+    pjs.deleteNode(queue_id);
+    reset_form("#queue_form");
+    disable_form("#queue_form");
+    return false;
+}
+
 function handle_queue_unbind() {
-    console.log('handle_queue_unbind');
     var binding_id = jQuery('#binding_id').val();
     var pjs = getProcessing();
     pjs.removeBinding(binding_id);
@@ -11997,14 +12020,22 @@ function handle_queue_unbind() {
 }
 
 function handle_exchange_form() {
-    console.log('handle_exchange_form');
     var uuid = jQuery('#exchange_id').val();
     var name = jQuery.trim(jQuery('#exchange_name').val());
     var type = jQuery('#exchange_type').val();
     var pjs = getProcessing();
     pjs.editExchange(uuid, name, type);
     jQuery('#exchange_id').val(name);
-    return false; 
+    return false;
+}
+
+function handle_exchange_delete() {
+    var exchange_id = jQuery('#exchange_id').val();
+    var pjs = getProcessing();
+    pjs.deleteNode(exchange_id);
+    reset_form("#exchange_form");
+    disable_form("#exchange_form");
+    return false;
 }
 
 function handle_stop_publisher_btn() {
@@ -12039,7 +12070,7 @@ function handle_export_btn() {
 
 function display_export_json() {
     var exp = exportToPlayer(),
-        json_string; 
+        json_string;
 
     if (jQuery('#pretty-print').is(':checked')) {
         json_string = JSON.stringify(exp, null, 2);
@@ -12077,4 +12108,8 @@ jQuery(document).ready(function() {
     jQuery('#pretty-print').change(handle_pretty_print_checkbox);
 
     jQuery('#binding_delete').click(handle_queue_unbind);
+    jQuery('#consumer_delete').click(handle_consumer_delete);
+    jQuery('#producer_delete').click(handle_producer_delete);
+    jQuery('#queue_delete').click(handle_queue_delete);
+    jQuery('#exchange_delete').click(handle_exchange_delete);
 });

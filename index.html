@@ -86,6 +86,7 @@
               <legend>Edit Producer</legend>
               <input id="edit_producer_id" type="hidden" name="edit_producer_id">
                <input id="edit_producer_name" name="name" type="text" placeholder="name">
+               <button id="producer_delete" type="button" class="btn btn-danger">Delete</button>
               <button id="edit_producer_change" type="submit" class="btn btn-primary">Edit</button>
             </fieldset>
           </form>
@@ -94,6 +95,7 @@
               <legend>Edit Consumer</legend>
               <input id="edit_consumer_id" type="hidden" name="edit_consumer_id">
                <input id="edit_consumer_name" name="name" type="text" placeholder="name">
+               <button id="consumer_delete" type="button" class="btn btn-danger">Delete</button>
               <button id="edit_consumer_change" type="submit" class="btn btn-primary">Edit</button>
             </fieldset>
           </form>
@@ -122,6 +124,7 @@
               <legend>Edit Queue</legend>
               <input id="queue_id" type="hidden" name="queue_id">
               <input id="queue_name" name="queue_name" type="text" placeholder="queue name">
+              <button id="queue_delete" type="button" class="btn btn-danger">Delete</button>
               <button id="queue_edit" type="submit" class="btn btn-primary">Edit</button>
             </fieldset>
           </form>
@@ -135,6 +138,7 @@
                 <option value="1">fanout</option>
                 <option value="2">topic</option>
               </select>
+              <button id="exchange_delete" type="button" class="btn btn-danger">Delete</button>
               <button id="exchange_edit" type="submit" class="btn btn-primary">Edit</button>
             </fieldset>
           </form>
